@@ -2,7 +2,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mod
 include(cmake/Modules/FindVector.cmake OPTIONAL)
 
 if(NOT DEFINED BUILD_EXPLICIT_SOLVER)
-  set(BUILD_EXPLICIT_SOLVER ON)
+  set(BUILD_EXPLICIT_SOLVER OFF)
 endif()
 
 if(NOT DEFINED BUILD_KOKKOS_SGH)
@@ -21,6 +21,9 @@ if(NOT DEFINED BUILD_KOKKOS_RDH)
   set(BUILD_KOKKOS_RDH OFF)
 endif()
 
+if(NOT DEFINED BUILD_KOKKOS_MFHO)
+  set(BUILD_KOKKOS_MFHO ON)
+endif()
 
 
 find_package(Vector)
@@ -103,6 +106,12 @@ if(BUILD_KOKKOS_RDH)
   message("\nbuilding RDH!  Here are the details: ")
 
   add_subdirectory(Explicit-Lagrange-Kokkos/RDH_solver)
+endif()
+
+if(BUILD_KOKKOS_MFHO)
+  message("\nbuilding MFHO!  Here are the details: ")
+
+  add_subdirectory(Explicit-Lagrange-Kokkos/MFHO_solver)
 endif()
 
 if(BUILD_EXPLICIT_SOLVER)

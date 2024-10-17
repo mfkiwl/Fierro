@@ -3,8 +3,8 @@
 solver="${1}"
 
 echo "Removing old Kokkos build and installation directory"
-rm -rf ${RDH_BUILD_DIR}
-mkdir -p ${RDH_BUILD_DIR}
+rm -rf ${MFHO_BUILD_DIR}
+mkdir -p ${MFHO_BUILD_DIR}
 
 [ -d "${libdir}/Elements/elements" ] && echo "Elements submodule exists"
 [ -d "${libdir}/Elements/matar/src" ] && echo "matar submodule exists"
@@ -32,19 +32,23 @@ elif [ "$solver" = "SGH" ]; then
     cmake_options+=(
         -D BUILD_1D_KOKKOS_SGH=ON
     )
-else
+elif ["$solver" = "RDH"]; then
     cmake_options+=(
     	-D BUILD_KOKKOS_RDH=ON
     )
+elif ["$solver" = "MFHO"]; then
+cmake_options+=(
+    -D BUILD_KOKKOS_MFHO=ON
+)
 fi
 
 # Print CMake options for reference
 echo "CMake Options: ${cmake_options[@]}"
 
-# Configure RDH
-cmake "${cmake_options[@]}" -B "${RDH_BUILD_DIR}" -S "${RDH_BASE_DIR}"
+# Configure MFHO
+cmake "${cmake_options[@]}" -B "${MFHO_BUILD_DIR}" -S "${MFHO_BASE_DIR}"
 
-# Build RDH
-make -C "${RDH_BUILD_DIR}" -j${RDH_BUILD_CORES}
+# Build MFHO
+make -C "${MFHO_BUILD_DIR}" -j${MFHO_BUILD_CORES}
 
 cd $basedir

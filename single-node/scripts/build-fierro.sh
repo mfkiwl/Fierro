@@ -2,7 +2,7 @@
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
-    echo "  --solver=<1DSGH|SGH|RDH>. Default is 'RDH'"
+    echo "  --solver=<1DSGH|SGH|RDH|MFHO>. Default is 'MFHO'"
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>. Default is 'serial'"
     echo "  --build_action=<full-app|set-env|install-kokkos|fierro>. Default is 'full-app'"
     echo "  --machine=<darwin|chicoma|linux|mac>. Default is 'linux'"
@@ -24,6 +24,7 @@ show_help() {
     echo "          1DSGH                       builds the 1D SGH solver"
     echo "          SGH                         builds the SGH solver"
     echo "          RDH                         builds the RDH solver"
+    echo "          MFHO                        builds the MFHO solver"
     echo " "
     echo "      --kokkos_build_type             The desired kokkos parallel backend to use. The default is 'serial'"
     echo " "
@@ -45,15 +46,15 @@ show_help() {
 
 # Initialize variables with default values
 build_action="full-app"
-solver="RDH"
+solver="MFHO"
 machine="darwin"
-kokkos_build_type="cuda"
+kokkos_build_type="openmp"
 build_cores="32"
 
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-trilinos" "install-kokkos" "fierro")
-valid_solver=("1DSGH" "SGH" "RDH")
+valid_solver=("1DSGH" "SGH" "RDH" "MFHO")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_machines=("darwin" "chicoma" "linux" "mac")
 
