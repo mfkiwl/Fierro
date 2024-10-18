@@ -1,5 +1,6 @@
 #include "matar.h"
 #include "mesh.h"
+#include "node_combination.h"
 
 #include <stdio.h>
 #include <iostream>
@@ -23,6 +24,95 @@
 #include <Tpetra_MultiVector.hpp>
 #include "Tpetra_Import.hpp"
 
+
+long long int num_nodes, num_elem;
+
+typedef Tpetra::Map<>::local_ordinal_type LO;
+typedef Tpetra::Map<>::global_ordinal_type GO;
+
+typedef Tpetra::CrsMatrix<real_t,LO,GO> MAT;
+typedef const Tpetra::CrsMatrix<real_t,LO,GO> const_MAT;
+typedef Tpetra::MultiVector<real_t,LO,GO> MV;
+typedef Tpetra::MultiVector<GO,LO,GO> MCONN;
+
+typedef Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>::size_type SizeType;
+typedef Tpetra::Details::DefaultTypes::node_type node_type;
+using traits = Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>;
+
+using array_layout    = typename traits::array_layout;
+using execution_space = typename traits::execution_space;
+using device_type     = typename traits::device_type;
+using memory_traits   = typename traits::memory_traits;
+using global_size_t = Tpetra::global_size_t;
+
+typedef Kokkos::View<real_t*, Kokkos::LayoutRight, device_type, memory_traits> values_array;
+typedef Kokkos::View<GO*, array_layout, device_type, memory_traits> global_indices_array;
+typedef Kokkos::View<LO*, array_layout, device_type, memory_traits> indices_array;
+//typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
+typedef MAT::local_graph_device_type::row_map_type::non_const_type row_pointers;
+//typedef Kokkos::DualView<real_t**, Kokkos::LayoutLeft, device_type>::t_dev vec_array;
+typedef MV::dual_view_type::t_dev vec_array;
+typedef MV::dual_view_type::t_host host_vec_array;
+typedef Kokkos::View<const real_t**, array_layout, HostSpace, memory_traits> const_host_vec_array;
+typedef Kokkos::View<const real_t**, array_layout, device_type, memory_traits> const_vec_array;
+typedef MV::dual_view_type dual_vec_array;
+typedef MCONN::dual_view_type dual_elem_conn_array;
+typedef MCONN::dual_view_type::t_host host_elem_conn_array;
+typedef MCONN::dual_view_type::t_dev elem_conn_array;
+typedef Kokkos::View<const GO**, array_layout, HostSpace, memory_traits> const_host_elem_conn_array;
+typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
+
+Teuchos::RCP<const Teuchos::Comm<int> > comm;
+Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > map; //map of node indices
+Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map; //sorted contiguous map of node indices
+Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > ghost_node_map; //map of node indices with ghosts on each rank
+Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_node_map; //map of node indices with ghosts on each rank
+Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > element_map; //non overlapping map of elements owned by each rank used in reduction ops
+Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_element_map; //overlapping map of elements connected to the local nodes in each rank
+Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_element_map; //sorted contiguous map of element indices owned by each rank used in parallel IO
+Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
+Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
+Teuchos::RCP<MCONN> global_nodes_in_elem_distributed; //element to node connectivity table
+Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
+Teuchos::RCP<MV> node_coords_distributed;
+Teuchos::RCP<MV> ghost_node_coords_distributed;
+Teuchos::RCP<MV> initial_node_coords_distributed;
+Teuchos::RCP<MV> all_initial_node_coords_distributed;
+Teuchos::RCP<MV> all_node_coords_distributed;
+
+//Distributions of data used to print
+Teuchos::RCP<MV> collected_node_coords_distributed;
+Teuchos::RCP<MCONN> collected_nodes_in_elem_distributed;
+Teuchos::RCP<MV> sorted_node_coords_distributed;
+Teuchos::RCP<MCONN> sorted_nodes_in_elem_distributed;
+
+//Boundary Conditions Data
+//CArray <Nodal_Combination> Patch_Nodes;
+size_t nboundary_patches;
+size_t num_boundary_conditions;
+int current_bdy_id;
+CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
+std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
+
+//file readin variables
+std::ifstream *in = NULL;
+std::streampos before_condition_header;
+std::string filename;
+int words_per_line, elem_words_per_line;
+enum node_ordering_convention {IJK, ENSIGHT};
+node_ordering_convention active_node_ordering_convention;
+
+//file output variables
+int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
+
+//output stream
+Teuchos::RCP<Teuchos::FancyOStream> fos;
+int last_print_step;
+
+//debug and system functions/variables
+double CPU_Time();
+void init_clock();
+double initial_CPU_time, communication_time, dev2host_time, host2dev_time, output_time;
 
 
 void read_mesh_ensight(char* MESH,
@@ -510,4 +600,3 @@ double heron(const double x1,
              const double y3);
 
 
-#endif 

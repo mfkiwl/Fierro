@@ -12,8 +12,6 @@ int main (int argc, char* argv[]) {
       std::exit(EXIT_FAILURE);
   } // end if
 
-  typedef Tpetra::Map<>::local_ordinal_type LO;
-  typedef Tpetra::Map<>::global_ordinal_type GO;
 
   MPI_Init (&argc, &argv);
   Kokkos::initialize (argc, argv);
@@ -31,8 +29,8 @@ int main (int argc, char* argv[]) {
   comm = Tpetra::getDefaultComm();
 
   // only use VTKPn for now
-  readVTKPn(argv[1], mesh, node, elem, zone, mat_pt, corner, ref_elem, num_dims, rk_num_bins);
-  
+  // readVTKPn(argv[1], mesh, node, elem, zone, mat_pt, corner, ref_elem, num_dims, rk_num_bins);
+
   MPI_Barrier(MPI_COMM_WORLD);
   Kokkos::finalize ();
   MPI_Finalize ();
